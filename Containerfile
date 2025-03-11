@@ -1,5 +1,4 @@
 ARG DISPLAY_SIZE="1920x1200x24"
-ARG ROOT_METHOD=setuid
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
 
 # ===================== Browser Bundle =========================================
@@ -91,52 +90,19 @@ RUN if [ -f /tmp/google-chrome-version ]; then \
 # Entrypoint file
 RUN cat <<-EOF > /usr/bin/entrypoint
 	#!/bin/bash
-	create-display &
 	export DISPLAY=:10
 	echo "running script: \${@}"
 	xvfb-run -s "-screen 0 ${DISPLAY_SIZE}" "\${@}"
 EOF
 RUN chmod 755 /usr/bin/entrypoint
 
-# Xvfb Option [A]: sudoers file ------------------------------------------------
-FROM staging as sudoers
-ARG DISPLAY_SIZE
-RUN echo "sudo Xvfb :10 -screen 0 ${DISPLAY_SIZE} -ac" > /usr/bin/create-display && \
-    chmod 755 /usr/bin/create-display
-RUN echo '%root ALL=(root) NOPASSWD:/usr/bin/Xvfb' > /etc/sudoers.d/xvfb
-
-# Xvfb Option [B]: setuid + binary launcher ------------------------------------
-FROM staging as setuid
-ARG DISPLAY_SIZE
-RUN dnf install -y gcc
-WORKDIR /opt
-RUN cat <<SOURCE > /opt/create-display.c
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <unistd.h>
-	int main(){
-	    setuid(0);
-	    return system("Xvfb :10 -screen 0 ${DISPLAY_SIZE} -ac");
-	}
-SOURCE
-RUN gcc create-display.c -o /usr/bin/create-display && \
-    chmod 4755 /usr/bin/create-display
-
-# Conditional COPY/inclusion of setuid workaround ==============================
-FROM Browser_Bundle as include_setuid
-COPY --from=setuid /usr/bin/create-display /usr/bin/entrypoint /tmp/*driver /usr/bin/
-
-# Conditional COPY/inclusion of sudoers workaround =============================
-FROM Browser_Bundle as include_sudoers
-COPY --from=sudoers /usr/bin/create-display /usr/bin/entrypoint /tmp/*driver /usr/bin/
-COPY --from=sudoers /etc/sudoers.d/xvfb /etc/sudoers.d/xvfb
-
 # =============== Selenium Ready Base Image ====================================
 # Final image based on build-arg ROOT_METHOD value (sudoers|setuid)
 # From here you may build out your selenium install and choice of 
 # libraries and languages for driving selenium
 # ==============================================================================
-FROM include_${ROOT_METHOD} as selenium_ready
+FROM Browser_Bundle as selenium_ready
+COPY --from=staging /usr/bin/entrypoint /tmp/*driver /usr/bin/
 ENTRYPOINT ["/usr/bin/entrypoint"]
 
 # ==============================================================================
