@@ -1,0 +1,9 @@
+= Containerized Selenium Environment
+
+This project focuses on creating a containerized environment for running Selenium.
+The goal is to maintain a container with browsers & webdrivers and a virtual 
+display configured to simulate a full graphical environment and capabilities to
+transparently transition tests run on an OS into a containerized environment.
+
+The container build is based around Fedora & RHEL/ubi to provide a path for
+environments leaning into Red Hat solutions and supply chains.
