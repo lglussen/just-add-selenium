@@ -31,9 +31,13 @@ function jas_image_build {
 
 function build_and_run_selenium_tests {
   for dir in `ls -1 selenium`; do
-    if [ -f "./$dir/test.sh" ]; then
+    if [ -f "./selenium/${dir}/test.sh" ]; then
       TEST_IMAGE=${dir}-selenium:${OS}-${OS_V}
+      echo "===================================================================="
+      echo BUILDING $TEST_IMAGE 
       podman build ./selenium/$dir/ --build-arg BASE_IMAGE=$IMAGE:${OS}-${OS_V} -t $TEST_IMAGE
+      echo "===================================================================="
+      echo TESTING $TEST_IMAGE 
       sh ./selenium/robotframework/test.sh $TEST_IMAGE $OS;
     fi
   done
