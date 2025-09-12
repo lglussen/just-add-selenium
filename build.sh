@@ -52,9 +52,10 @@ function build_fedora {
       if [[ -z $(git status --porcelain) ]]; then
         echo "Git repository is clean."
         echo "TRY TO PUSH IMAGE TO QUAY.IO"
-        echo "podman login quay.io"
-        echo "podman push robotframework-selenium:latest"
-        echo "podman push robotframework-selenium:$VERSION"
+        source .push_secret
+        podman login quay.io -u $QUAY_USERNAME -p $QUAY_PASSWORD
+        podman push  $IMAGE:$VERSION
+        podman push  $IMAGE:latest
       else
         echo "Git repository is dirty (has uncommitted changes)."
       fi

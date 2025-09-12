@@ -3,3 +3,4 @@ metadata/*
 .vscode/
 __pycache__
 _experimental_archive
+.push_secret
