@@ -1,0 +1,14 @@
+=== Multistage Build flow
+A multistage build is leveraged to construct the final image.
+
+The staging build separates a set of actions that would be tedious to script in a way that would not introduce unessissary content into the final image. 
+
+[mermaid]
+ifdef::env-github[[source,mermaid]]
+----
+flowchart TD
+  A(["<b>Browser_Bundle</b>"<br>install browsers])
+  A --> B(["<b>staging</b>"<br>Build container for downloading, unpacking & preparing<br>web-driver dependencies scripts and other binaries])
+  A --> C([<b>just-add-selenium</b><br>final configuration])
+  B -->|copy over the staged files| C
+----

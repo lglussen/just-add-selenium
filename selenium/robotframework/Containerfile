@@ -1,0 +1,37 @@
+# ==============================================================================
+# Robot Framework flavored Selenium
+# ==============================================================================
+ARG BASE_IMAGE=quay.io/lglussen/just-add-selenium
+FROM $BASE_IMAGE
+USER root
+RUN <<EOF 
+    set -e
+    # Pip for python dependencies
+    dnf install -y python3-pip
+    dnf clean all
+    # Robotframework & Selenium
+    pip3 install \
+        robotframework \
+        robotframework-seleniumlibrary
+    
+    # Optional library for annotating screenshots
+    pip3 install robotframework-seleniumscreenshots
+
+    ## Optional library for creating and defining the virtural display from 
+    ## robotframework test scripts.  By default this image is setup to create 
+    ## the display transparently without robot-framework scripts needing to know 
+    ## if they are in a headless environment or not 
+    # pip3 install robotframework-xvfb
+    
+    # One of Pillow/wxPython/PyGTK/Scrot required by the built-in "Screenshot" Library
+    pip3 install Pillow    
+    pip3 cache purge
+EOF
+
+USER selenium-user
+
+CMD ["robot", "-d", "/out", "/tests/"]
+
+LABEL org.opencontainers.image.authors="luke.lussenden@gmail.com"
+LABEL org.opencontainers.image.title="Robot Framework - Selenium"
+LABEL org.opencontainers.image.description="Containerized Selenium testing provided through the Robot Framework Selenium Library"

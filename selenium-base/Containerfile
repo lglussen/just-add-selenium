@@ -1,0 +1,49 @@
+# Containerfile for UBI 9.5 and Fedora based
+ARG DISPLAY_SIZE="1920x1200x24"
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG VERSION=1.0
+ARG GIT_COMMIT=""
+
+# ===================== Browser Bundle =========================================
+# - Install Virtual Display Buffer
+# - Install Major browsers installed (Firefox, Edge, Chrome/Choromium)
+FROM $BASE_IMAGE as Browser_Bundle
+COPY --chmod=755 browser-bundle.sh /tmp/browser-bundle.sh
+RUN --mount=type=secret,id=creds /tmp/browser-bundle.sh
+
+# -------------------------- Staging & Prep ------------------------------------
+# Build container for downloading, unpacking & preparing web-driver dependencies
+# scripts and other binaries.
+#
+# Built on Browser_Bundle to access installed browser versions & pair webdrivers
+# ------------------------------------------------------------------------------
+FROM Browser_Bundle as staging
+ARG DISPLAY_SIZE
+COPY --chmod=755 staging.sh /tmp/
+RUN /tmp/staging.sh
+
+# =============== "Just Add Selenium" Base Image ====================================
+# Copy all webdrivers and entrypoint configuration 
+# 
+# Output is an image ready to host a Selenium framework complete with browsers,
+# web-drivers, and a display buffer to render images.
+#
+# from here you may build out your selenium install and choice of libraries
+# and languages
+# ==============================================================================
+FROM Browser_Bundle as just-add-selenium
+ARG VERSION
+COPY --from=staging /usr/bin/entrypoint /tmp/*driver /usr/bin/
+ENTRYPOINT ["/usr/bin/entrypoint"]
+
+# non-root user required for launching chrome and edge browsers
+# adding to group 0 to mimic OpenShift default SCC policy behavior 
+RUN useradd -G 0 selenium-user
+
+LABEL org.opencontainers.image.authors="luke.lussenden@gmail.com"
+LABEL org.opencontainers.image.title="just-add-selenium"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.licenses="The Unlicense"
+LABEL org.opencontainers.image.description="Containerized browsers, webdrivers & virtual-display buffers to support Selenium environments"
+LABEL git.commit.hash=$GIT_COMMIT
+

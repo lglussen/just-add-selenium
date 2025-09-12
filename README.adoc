@@ -1,9 +1,67 @@
-= Containerized Selenium Environment
+= Just Add Selenium: a Containerized Selenium-Ready Environment
 
 This project focuses on creating a containerized environment for running Selenium.
-The goal is to maintain a container with browsers & webdrivers and a virtual 
-display configured to simulate a full graphical environment and capabilities to
-transparently transition tests run on an OS into a containerized environment.
+The goal is to maintain a container with browsers, webdrivers, and a virtual 
+display configured to simulate a full graphical environment. The outcome should
+allow the transparent transition of selenium projects into a containerized environment.
 
-The container build is based around Fedora & RHEL/ubi to provide a path for
-environments leaning into Red Hat solutions and supply chains.
+As the name implies, the images are "READY" for selenium, but no selenium solutions are installed on this image.
+This image simply prepares the base browser/driver/graphical environment.
+
+This build may be based on Fedora or UBI base-images.
+
+A published image (based off of `fedora`) is available at `quay.io/lglussen/just-add-selenium:latest`.
+The source here may be used to build `ubi` or `fedoras` based versions.  
+Fedora and ubi versions are almost identical with the exception of browsers `Chromium` and `Google Chrome` not being available in UBI repositories; 
+UBI based images only include Firefox and Microsoft Edge browsers.
+
+== Building the `just-add-selenium` image
+
+=== Fedora based build
+
+```shell
+podman build ./selenium-base \
+       --build-arg BASE_IMAGE=registry.fedoraproject.org/fedora:42 \
+       -t just-add-selenium:latest
+```
+
+=== Red Hat UBI based build
+
+Because ubi images builds will require a registered subscription-manager connection to access packages such as the FireFox browser (which is not typically a package installed on a container), there are 2 approaches that may be taken:
+1. Build from a RHEL host system with an activated `subscription-manager`
+2. Pass authentication credentials into the build using `--secret`
+
+NOTE: *ubi 10* is not yet supported.  There is currently a dependency on xorg-x11-server-Xvfb which is not available in *ubi 10*
+
+
+==== building from a RHEL `subscription-manager` enabled host
+```
+podman build ./selenium-base \
+            --build-arg BASE_IMAGE=registry.redhat.io/ubi9/ubi:9.5 \
+            -t just-add-selenium:latest
+```
+
+==== building from a non-RHEL host
+```shell
+podman build ./selenium-base \
+            --build-arg BASE_IMAGE=registry.redhat.io/ubi9/ubi:9.5 \
+            -t just-add-selenium:latest
+            --secret=id=creds,src=/path/to/credentials.txt
+```
+.example credentials.txt
+```
+USERNAME=my-redhat-account-user
+PASSWORD=my-redhat-account-password
+```
+
+
+NOTE: using the `--secret` mechanism ensures the sensitive data is not leaked into
+      the resulting image.  Instead, the data is only available during the build.
+
+
+
+== Using the _just-add-selenium_ image
+
+Whether you base your image off of fedora or ubi is up to your needs, as is what type of selenium based framework you choose to install.
+
+

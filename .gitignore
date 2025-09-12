@@ -1,0 +1,5 @@
+out/*
+metadata/*
+.vscode/
+__pycache__
+_experimental_archive

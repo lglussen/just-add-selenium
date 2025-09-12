@@ -1,49 +1,76 @@
 #!/usr/bin/bash
-# script to build setuid & sudoers permutations of fedora and ub
+# used for building, validating and publishing
+# see README.adoc for a more straightforward build approach
 
-CREDENTIALS_FILE=$1
-IMAGES=""
+VERSION="1.0"
+IMAGE=quay.io/lglussen/just-add-selenium
 
+function jas_image_build {
 
-function build {
-  METHOD=$1; OS=$2; shift 2;
-  OS_NAME=`podman inspect $OS | jq -r ' .[].Config.Labels.name'`
-  IMAGE=robot-selenium:${OS_NAME}-${METHOD}
-  echo "podman build . --build-arg ROOT_METHOD=$METHOD --build-arg BASE_IMAGE=$OS -t $IMAGE $@"
-  podman build . --build-arg ROOT_METHOD=$METHOD --build-arg BASE_IMAGE=$OS -t $IMAGE $@
-  test $IMAGE $OS_NAME $METHOD;
+  BASE_IMAGE=${1:-"registry.fedoraproject.org/fedora:latest"}
+  CREDENTIALS_FILE=$2 
+
+  # ERROR if base image is UBI and no subscription-manager service is available on the host or through provided credentials
+  if echo $BASE_IMAGE | grep -q ubi && [ -z "$CREDENTIALS_FILE" ]  && ! subscription-manager status > /dev/null 2>&1; then
+    >&2 echo -e "No subscription manager credentials provided and no registered subscription-manager available on host system"; exit -1
+  fi
+  podman pull $BASE_IMAGE
+
+  OS=`podman inspect $BASE_IMAGE | jq -r ' .[].Config.Labels.name'`
+  OS_V=`podman inspect $BASE_IMAGE | jq -r ' .[].Config.Labels.version'`
+
+  podman build selenium-base \
+              --build-arg BASE_IMAGE=$BASE_IMAGE \
+              --build-arg VERSION=$VERSION \
+              --build-arg GIT_COMMIT=$(git rev-parse HEAD) \
+              -t $IMAGE:${OS}-${OS_V} \
+              -t $IMAGE:$VERSION \
+              -t $IMAGE:latest \
+              $(if [[ -n "$CREDENTIALS_FILE" ]]; then echo "--secret=id=creds,src=$CREDENTIALS_FILE"; fi)
 }
 
-function test {
-  IMAGE=$1; OS=$2; METHOD=$3; RED='\033[1;31m'; BLUE='\033[1;34m'; NC='\033[0m' # No Color
-  OUTPUT_DIR=$(sed 's,[:/],_,g' <<< $IMAGE).test-results
-  if podman volume exists ${OUTPUT_DIR}; then echo "VOLUME $OUTPUT_DIR exists"; else
-      podman volume create ${OUTPUT_DIR}
-  fi
+function build_and_run_selenium_tests {
+  for dir in `ls -1 selenium`; do
+    if [ -f "./$dir/test.sh" ]; then
+      TEST_IMAGE=${dir}-selenium:${OS}-${OS_V}
+      podman build ./selenium/$dir/ --build-arg BASE_IMAGE=$IMAGE:${OS}-${OS_V} -t $TEST_IMAGE
+      sh ./selenium/robotframework/test.sh $TEST_IMAGE $OS;
+    fi
+  done
+}
 
-  if podman run -it --rm -v ./test:/test:ro,z -v ${OUTPUT_DIR}:/out:rw,z ${IMAGE} robot -d /out --name "${OS} (${METHOD} strategy) $IMAGE" /test/${OS}.robot ; then
-    echo -e "${BLUE}[TEST SUCCESS] ${IMAGE}${NC}"
-    echo -e "${BLUE} -> do tagging promotion stuff ...${NC}"
-    echo -e "${BLUE} -> do image push stuff ...${NC}"
-    export IMAGES="${IMAGES}\n${IMAGE} : ${BLUE}tests passed${NC}"
+function build_fedora {
+  jas_image_build "registry.fedoraproject.org/fedora:latest"
+  
+  echo "BUILD TEST CONTAINER ... "
+  podman build ./selenium/robotframework/ --build-arg BASE_IMAGE=$IMAGE:${OS}-${OS_V} -t robotframework-selenium:${OS}-${OS_V}
+  if build_and_run_selenium_tests; then
+      if [[ -z $(git status --porcelain) ]]; then
+        echo "Git repository is clean."
+        echo "TRY TO PUSH IMAGE TO QUAY.IO"
+        echo "podman login quay.io"
+        echo "podman push robotframework-selenium:latest"
+        echo "podman push robotframework-selenium:$VERSION"
+      else
+        echo "Git repository is dirty (has uncommitted changes)."
+      fi
   else
-    echo -e "${RED}[TEST FAILURE] ${IMAGE}${NC}"
-    export IMAGES="${IMAGES}\n${IMAGE} : ${RED}tests failed${NC}"
+      echo "DON'T PUSH IMAGE"
   fi
-  REPORT="$(podman volume inspect ${OUTPUT_DIR} | jq -r '.[].Mountpoint')/report.html"
-  echo -e "\e]8;;file://${REPORT}\e\\  ROBOT FRAMEWORK TEST REPORT: report.html ($REPORT)\e]8;;\e\\"
-  echo 
+
 }
 
-build setuid  fedora:latest
-build sudoers fedora:latest
+function build_ubi {
+  jas_image_build "registry.access.redhat.com/ubi9/ubi:9.5" $1
+  podman build ./selenium/robotframework/ --build-arg BASE_IMAGE=just-add-selenium:${OS}-${OS_V} -t robotframework-selenium:${OS}-${OS_V}
+  sh ./selenium/robotframework/test.sh robotframework-selenium:${OS}-${OS_V} ubi9
+}
 
-if [ -f $CREDENTIALS_FILE ]; then
-  build setuid  registry.access.redhat.com/ubi9/ubi:9.5 --secret=id=creds,src=$CREDENTIALS_FILE
-  build sudoers registry.access.redhat.com/ubi9/ubi:9.5 --secret=id=creds,src=$CREDENTIALS_FILE
-else
-  build setuid  registry.access.redhat.com/ubi9/ubi:9.5
-  build sudoers registry.access.redhat.com/ubi9/ubi:9.5
-fi
 
-echo -e $IMAGES
+#podman build ./selenium/computershare/  --build-arg BASE_IMAGE=just-add-selenium:fedora -t computershare
+#podman build ./selenium/robotframework/ --build-arg BASE_IMAGE=just-add-selenium:fedora -t robotframework
+
+
+
+
+
