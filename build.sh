@@ -53,7 +53,7 @@ function build_fedora {
         echo "Git repository is clean."
         echo "TRY TO PUSH IMAGE TO QUAY.IO"
         source .push_secret
-        podman login quay.io -u $QUAY_USERNAME -p $QUAY_PASSWORD
+        podman login --username $QUAY_USERNAME --password $QUAY_PASSWORD quay.io
         podman push  $IMAGE:$VERSION
         podman push  $IMAGE:latest
       else
