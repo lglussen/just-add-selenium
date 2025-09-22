@@ -102,8 +102,9 @@ function build_fedora {
       echo; echo;
       echo "All child image builds and tests PASS for $JAS_IMAGE:${OS}-${OS_V}"
       if [[ -z $(git status --porcelain) ]]; then
+	set -e
         echo -e "Git repository is clean.\nTRY TO PUSH IMAGE TO QUAY.IO"
-        source .push_secret
+        source $QUAY_IO_AUTH 
         podman login --username $QUAY_USERNAME --password $QUAY_PASSWORD quay.io
         
         push_image $JAS_IMAGE
