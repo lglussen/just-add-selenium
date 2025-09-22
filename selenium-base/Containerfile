@@ -39,7 +39,7 @@ ENTRYPOINT ["/usr/bin/entrypoint"]
 # non-root user required for launching chrome and edge browsers
 # adding to group 0 to mimic OpenShift default SCC policy behavior 
 RUN useradd -G 0 selenium-user
-
+WORKDIR /home/selenium-user
 LABEL org.opencontainers.image.authors="luke.lussenden@gmail.com"
 LABEL org.opencontainers.image.title="just-add-selenium"
 LABEL org.opencontainers.image.version="${VERSION}"

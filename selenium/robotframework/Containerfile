@@ -1,7 +1,7 @@
 # ==============================================================================
 # Robot Framework flavored Selenium
 # ==============================================================================
-ARG BASE_IMAGE=quay.io/lglussen/just-add-selenium
+ARG BASE_IMAGE=quay.io/lglussen/just-add-selenium:latest
 FROM $BASE_IMAGE
 USER root
 RUN <<EOF 

@@ -1,0 +1,6 @@
+ARG BASE_IMAGE=quay.io/lglussen/just-add-selenium:latest
+FROM $BASE_IMAGE
+USER root
+RUN dnf install pip vim -y && dnf clean all
+USER selenium-user
+RUN pip install selenium webdriver-manager

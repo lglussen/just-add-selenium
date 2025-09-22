@@ -5,8 +5,7 @@ The goal is to maintain a container with browsers, webdrivers, and a virtual
 display configured to simulate a full graphical environment. The outcome should
 allow the transparent transition of selenium projects into a containerized environment.
 
-As the name implies, the images are "READY" for selenium, but no selenium solutions are installed on this image.
-This image simply prepares the base browser/driver/graphical environment.
+As the name implies, the images are "READY" for selenium, but no selenium solutions are installed on the `just-add-selenium` image; this image simply prepares the base browser/driver/graphical environment. Example child images that do add specific selenium environments on-top of the `just-add-selenium` image can be found in this repository under `/selenium/`.
 
 This build may be based on Fedora or UBI base-images.
 
@@ -28,6 +27,7 @@ podman build ./selenium-base \
 === Red Hat UBI based build
 
 Because ubi images builds will require a registered subscription-manager connection to access packages such as the FireFox browser (which is not typically a package installed on a container), there are 2 approaches that may be taken:
+
 1. Build from a RHEL host system with an activated `subscription-manager`
 2. Pass authentication credentials into the build using `--secret`
 
@@ -62,6 +62,20 @@ NOTE: using the `--secret` mechanism ensures the sensitive data is not leaked in
 
 == Using the _just-add-selenium_ image
 
-Whether you base your image off of fedora or ubi is up to your needs, as is what type of selenium based framework you choose to install.
+Whether you base your image off of fedora or ubi is up to your needs, as is what type of selenium based framework you choose to install. This project also maintains a few child images built off of the *just-add-selenium* base image. The child images are in part used to test the functionality of the *just-add-selenium* image, but are also valid base images or starting points for reuse. 
 
+=== User
+A user `selenium-user` is present in the image with a default `WORKDIR` of `/home/selenium-user/`. 
+Running as the `root` user doesn't work with every packaged browser so it is recommended to run under the provided `selenium-user` or some other non-root user.
+
+CAUTION: If `USER root` is required for part of your Containerfile build, remember to switch back to the non-root user.
+
+== Published Images
+Don't need the code and just want to use the images defined in this repository? Pull a prebuilt image!
+
+quay.io/lglussen/just-add-selenium:latest:: A base image for installing and running a graphical Selenium Environment
+      
+quay.io/lglussen/robotframework-selenium:latest:: https://robotframework.org/[Robotframework] with https://robotframework.org/SeleniumLibrary/SeleniumLibrary.html[SeleniumLibrary] based off the `just-add-selenium` image
+
+quay.io/lglussen/python-selenium:latest:: Based off the `just-add-selenium` image with the addition of `pip` packages `selenium` and `webdriver-manager` to jumpstart python based selenium development.
 

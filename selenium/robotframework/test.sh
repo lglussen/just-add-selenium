@@ -1,4 +1,5 @@
-
+# test.sh <name-of-image-to-test> <test-file-name>
+# test.sh quay.io/lglussen/robotframework-selenium fedora
 IMAGE=$1
 SUITE=$2
 
@@ -18,18 +19,18 @@ fi
 function final_report {
     REPORT="$(podman volume inspect ${OUTPUT_DIR} | jq -r '.[].Mountpoint')/report.html"
     REPORT_LINK="\e]8;;file://${REPORT}\e\\$REPORT\e]8;;\e\\"
-    FINAL_REPORT="${FINAL_REPORT}\t${REPORT_LINK}\n"
-    echo -e $FINAL_REPORT
+    echo -e "${FINAL_REPORT}\n\t${REPORT_LINK}"
+    echo
 }
 
 testdir="$SCRIPT_DIR/test";
 ls $testdir
 
 if podman run -it --rm -v "$SCRIPT_DIR/test:/test:ro,z" -v ${OUTPUT_DIR}:/out:rw,z ${IMAGE} robot -d /out --name "$IMAGE" /test/${SUITE}.robot ; then
-   FINAL_REPORT="${FINAL_REPORT}${IMAGE} : ${COLOR_BLUE}tests passed${COLOR_NC}\n"
+   FINAL_REPORT="${FINAL_REPORT}${IMAGE} : ${COLOR_BLUE}tests passed${COLOR_NC}"
    final_report
 else
-   FINAL_REPORT="${FINAL_REPORT}${IMAGE} : ${COLOR_RED}tests failed${COLOR_NC}\n"
+   FINAL_REPORT="${FINAL_REPORT}${IMAGE} : ${COLOR_RED}tests failed${COLOR_NC}"
    final_report
    exit -1
 fi
