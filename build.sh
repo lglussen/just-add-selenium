@@ -85,10 +85,9 @@ function build_and_test_child_images {
 }
 
 function push_image {
-  echo podman push $1:$VERSION
-  echo podman push $1:latest
-  echo podman push $1:$VERSION-$(git rev-parse --short HEAD)
-  echo
+  podman push $1:$VERSION
+  podman push $1:latest
+  podman push $1:$VERSION-$(git rev-parse --short HEAD)
 }
 
 function build_fedora {
